@@ -2,7 +2,7 @@ import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
 
 export default defineConfig({
-  site: 'https://Tridominous.github.io',
+  site: 'https://tridominous.github.io',
   base: '/infection-notes',
   integrations: [tailwind()],
   markdown: {
