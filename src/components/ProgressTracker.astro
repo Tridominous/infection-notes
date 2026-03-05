@@ -1,0 +1,46 @@
+---
+interface Props {
+  lectureOrder: number;
+  lectureTitle: string;
+}
+
+const { lectureOrder, lectureTitle } = Astro.props;
+---
+
+<div class="progress-tracker flex items-center gap-3 mb-6 p-3 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
+  <label class="flex items-center gap-2 cursor-pointer select-none text-sm">
+    <input
+      type="checkbox"
+      id={`complete-${lectureOrder}`}
+      class="w-5 h-5 rounded accent-[var(--color-success)]"
+      data-lecture={lectureOrder}
+    />
+    <span>Mark <strong>Lecture {lectureOrder}: {lectureTitle}</strong> as complete</span>
+  </label>
+</div>
+
+<script>
+  document.querySelectorAll('.progress-tracker input[type="checkbox"]').forEach((checkbox) => {
+    const input = checkbox as HTMLInputElement;
+    const lecture = input.dataset.lecture;
+    if (!lecture) return;
+
+    // Restore state
+    input.checked = localStorage.getItem(`lecture-${lecture}-complete`) === 'true';
+
+    input.addEventListener('change', () => {
+      localStorage.setItem(`lecture-${lecture}-complete`, String(input.checked));
+      // Update sidebar progress
+      const total = 8;
+      let completed = 0;
+      for (let i = 1; i <= total; i++) {
+        if (localStorage.getItem(`lecture-${i}-complete`) === 'true') completed++;
+      }
+      const pct = Math.round((completed / total) * 100);
+      const pctEl = document.getElementById('progress-pct');
+      const barEl = document.getElementById('progress-bar-fill');
+      if (pctEl) pctEl.textContent = `${pct}%`;
+      if (barEl) barEl.style.width = `${pct}%`;
+    });
+  });
+</script>

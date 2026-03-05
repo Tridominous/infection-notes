@@ -1,0 +1,76 @@
+---
+import { getCollection } from 'astro:content';
+
+interface Props {
+  currentSlug?: string;
+}
+
+const { currentSlug } = Astro.props;
+const lectures = (await getCollection('lectures')).sort((a, b) => a.data.order - b.data.order);
+const base = import.meta.env.BASE_URL;
+---
+
+<nav class="sidebar" aria-label="Lecture navigation">
+  <div class="p-4 border-b border-[var(--color-border)]">
+    <a href={`${base}`} class="flex items-center gap-2 no-underline">
+      <span class="text-2xl">🦠</span>
+      <div>
+        <div class="font-bold text-sm text-[var(--color-text)]">BIOM3703</div>
+        <div class="text-xs text-[var(--color-text-secondary)]">Infection Notes</div>
+      </div>
+    </a>
+  </div>
+  <div class="p-3">
+    <div class="mb-2 px-1">
+      <span class="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Lectures</span>
+    </div>
+    <ul class="space-y-0.5 list-none p-0 m-0">
+      {lectures.map((lecture) => {
+        const isActive = currentSlug === lecture.slug;
+        return (
+          <li>
+            <a
+              href={`${base}/lectures/${lecture.slug}/`}
+              class:list={['sidebar-link', { active: isActive }]}
+            >
+              <span class="text-lg flex-shrink-0">{lecture.data.icon}</span>
+              <div class="min-w-0">
+                <div class="text-xs opacity-60">Lecture {lecture.data.order}</div>
+                <div class="truncate">{lecture.data.title}</div>
+              </div>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  </div>
+  <div class="p-3 border-t border-[var(--color-border)] mt-auto">
+    <div id="sidebar-progress" class="text-xs text-[var(--color-text-secondary)]">
+      <div class="flex justify-between mb-1">
+        <span>Progress</span>
+        <span id="progress-pct">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-bar-fill" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<script>
+  function updateProgress() {
+    const total = 8;
+    let completed = 0;
+    for (let i = 1; i <= total; i++) {
+      if (localStorage.getItem(`lecture-${i}-complete`) === 'true') {
+        completed++;
+      }
+    }
+    const pct = Math.round((completed / total) * 100);
+    const pctEl = document.getElementById('progress-pct');
+    const barEl = document.getElementById('progress-bar-fill');
+    if (pctEl) pctEl.textContent = `${pct}%`;
+    if (barEl) barEl.style.width = `${pct}%`;
+  }
+  updateProgress();
+</script>

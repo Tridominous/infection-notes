@@ -1,0 +1,93 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const lectures = (await getCollection('lectures')).sort((a, b) => a.data.order - b.data.order);
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Dashboard">
+  <div class="mb-8">
+    <h1 class="text-3xl font-extrabold mb-2">BIOM3703 Infection</h1>
+    <p class="text-[var(--color-text-secondary)]">Comprehensive study notes for the Infection module. Click any lecture to start revising.</p>
+  </div>
+
+  <!-- Progress Overview -->
+  <div class="mb-8 p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-lg font-bold">Your Progress</h2>
+      <span id="dash-pct" class="text-sm font-semibold text-[var(--color-success)]">0%</span>
+    </div>
+    <div class="progress-bar h-3 rounded-full">
+      <div class="progress-fill rounded-full" id="dash-bar" style="width: 0%"></div>
+    </div>
+    <p id="dash-text" class="text-xs text-[var(--color-text-secondary)] mt-2">0 of 8 lectures completed</p>
+  </div>
+
+  <!-- Lecture Grid -->
+  <div class="grid gap-4 sm:grid-cols-2">
+    {lectures.map((lecture) => (
+      <a
+        href={`${base}/lectures/${lecture.slug}/`}
+        class="group block p-4 rounded-xl bg-[var(--color-card)] border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:shadow-lg transition-all no-underline"
+      >
+        <div class="flex items-start gap-3">
+          <span class="text-3xl">{lecture.data.icon}</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-xs text-[var(--color-text-secondary)] mb-0.5">Lecture {lecture.data.order}</div>
+            <h3 class="font-bold text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors mb-1">{lecture.data.title}</h3>
+            <p class="text-xs text-[var(--color-text-secondary)] line-clamp-2">{lecture.data.description}</p>
+          </div>
+          <div class="flex-shrink-0 mt-1" id={`card-check-${lecture.data.order}`}>
+            <div class="w-6 h-6 rounded-full border-2 border-[var(--color-border)] flex items-center justify-center">
+              <svg class="hidden w-4 h-4 text-[var(--color-success)]" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </a>
+    ))}
+  </div>
+
+  <!-- Quick Links -->
+  <div class="mt-8 p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
+    <h2 class="text-lg font-bold mb-3">Quick Revision Tips</h2>
+    <ul class="text-sm text-[var(--color-text-secondary)] space-y-1.5 list-disc pl-5">
+      <li>For each pathogen, revise: <strong>Disease, Lab Detection, Epidemiology, Transmission, Treatment, Prevention</strong></li>
+      <li>Use <kbd class="text-xs bg-[var(--color-bg)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">Ctrl+K</kbd> to search across all lectures</li>
+      <li>Mark lectures as complete to track your progress</li>
+      <li>Use the table of contents (right side on desktop) to navigate long lectures</li>
+      <li>Print any lecture for offline revision using <kbd class="text-xs bg-[var(--color-bg)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">Ctrl+P</kbd></li>
+    </ul>
+  </div>
+</Layout>
+
+<script>
+  function updateDashboard() {
+    const total = 8;
+    let completed = 0;
+    for (let i = 1; i <= total; i++) {
+      const done = localStorage.getItem(`lecture-${i}-complete`) === 'true';
+      if (done) completed++;
+      // Update card checkmarks
+      const card = document.getElementById(`card-check-${i}`);
+      if (card) {
+        const svg = card.querySelector('svg');
+        const circle = card.querySelector('div');
+        if (done) {
+          svg?.classList.remove('hidden');
+          circle?.classList.add('border-[var(--color-success)]', 'bg-green-50');
+        }
+      }
+    }
+    const pct = Math.round((completed / total) * 100);
+    const pctEl = document.getElementById('dash-pct');
+    const barEl = document.getElementById('dash-bar');
+    const textEl = document.getElementById('dash-text');
+    if (pctEl) pctEl.textContent = `${pct}%`;
+    if (barEl) barEl.style.width = `${pct}%`;
+    if (textEl) textEl.textContent = `${completed} of ${total} lectures completed`;
+  }
+  updateDashboard();
+</script>

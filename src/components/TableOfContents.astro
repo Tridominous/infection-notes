@@ -1,0 +1,54 @@
+---
+interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+}
+
+const { headings } = Astro.props;
+const tocHeadings = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{tocHeadings.length > 0 && (
+  <nav class="toc hidden xl:block" aria-label="Table of contents">
+    <div class="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] mb-2">
+      On this page
+    </div>
+    <ul class="list-none p-0 m-0 space-y-0.5">
+      {tocHeadings.map((h) => (
+        <li>
+          <a
+            href={`#${h.slug}`}
+            class:list={['toc-link', { 'depth-3': h.depth === 3 }]}
+            data-heading={h.slug}
+          >
+            {h.text}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}
+
+<script>
+  // Scroll spy
+  const tocLinks = document.querySelectorAll('.toc-link');
+  const headingEls = Array.from(tocLinks).map((link) => {
+    const id = link.getAttribute('data-heading');
+    return id ? document.getElementById(id) : null;
+  }).filter(Boolean) as HTMLElement[];
+
+  function updateActive() {
+    const scrollY = window.scrollY + 100;
+    let current = 0;
+    for (let i = 0; i < headingEls.length; i++) {
+      if (headingEls[i].offsetTop <= scrollY) {
+        current = i;
+      }
+    }
+    tocLinks.forEach((link, i) => {
+      link.classList.toggle('active', i === current);
+    });
+  }
+
+  window.addEventListener('scroll', updateActive, { passive: true });
+  updateActive();
+</script>

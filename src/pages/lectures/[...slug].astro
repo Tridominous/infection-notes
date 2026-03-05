@@ -1,0 +1,54 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import TableOfContents from '../../components/TableOfContents.astro';
+import ProgressTracker from '../../components/ProgressTracker.astro';
+
+export async function getStaticPaths() {
+  const lectures = await getCollection('lectures');
+  return lectures.map((lecture) => ({
+    params: { slug: lecture.slug },
+    props: { lecture },
+  }));
+}
+
+const { lecture } = Astro.props;
+const { Content, headings } = await lecture.render();
+const allLectures = (await getCollection('lectures')).sort((a, b) => a.data.order - b.data.order);
+const currentIndex = allLectures.findIndex((l) => l.slug === lecture.slug);
+const prev = currentIndex > 0 ? allLectures[currentIndex - 1] : null;
+const next = currentIndex < allLectures.length - 1 ? allLectures[currentIndex + 1] : null;
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title={`Lecture ${lecture.data.order}: ${lecture.data.title}`} currentSlug={lecture.slug}>
+  <TableOfContents headings={headings} />
+
+  <ProgressTracker lectureOrder={lecture.data.order} lectureTitle={lecture.data.title} />
+
+  <article class="prose">
+    <Content />
+  </article>
+
+  <!-- Prev/Next Navigation -->
+  <nav class="flex justify-between items-center mt-12 pt-6 border-t border-[var(--color-border)]">
+    {prev ? (
+      <a href={`${base}/lectures/${prev.slug}/`} class="flex items-center gap-2 text-sm text-[var(--color-accent)] no-underline hover:underline">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4l-4 4 4 4"/></svg>
+        <div>
+          <div class="text-xs text-[var(--color-text-secondary)]">Previous</div>
+          <div class="font-medium">{prev.data.icon} {prev.data.title}</div>
+        </div>
+      </a>
+    ) : <div />}
+    {next ? (
+      <a href={`${base}/lectures/${next.slug}/`} class="flex items-center gap-2 text-sm text-[var(--color-accent)] no-underline hover:underline text-right">
+        <div>
+          <div class="text-xs text-[var(--color-text-secondary)]">Next</div>
+          <div class="font-medium">{next.data.icon} {next.data.title}</div>
+        </div>
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4l4 4-4 4"/></svg>
+      </a>
+    ) : <div />}
+  </nav>
+</Layout>

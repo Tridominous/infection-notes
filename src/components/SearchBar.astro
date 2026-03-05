@@ -1,0 +1,114 @@
+---
+import { getCollection } from 'astro:content';
+
+const lectures = (await getCollection('lectures')).sort((a, b) => a.data.order - b.data.order);
+const base = import.meta.env.BASE_URL;
+
+// Build search index at build time
+const searchIndex = lectures.map((lecture) => ({
+  slug: lecture.slug,
+  title: lecture.data.title,
+  order: lecture.data.order,
+  icon: lecture.data.icon,
+  description: lecture.data.description,
+  body: lecture.body
+    ?.replace(/```[\s\S]*?```/g, '') // remove code blocks
+    .replace(/\|.*\|/g, ' ')        // simplify tables
+    .replace(/[#*_\-\[\]()>]/g, '') // remove markdown syntax
+    .replace(/\s+/g, ' ')           // normalize whitespace
+    .slice(0, 5000),                // limit size
+}));
+---
+
+<div class="search-modal" id="search-modal">
+  <div class="search-box">
+    <div class="flex items-center px-4 py-3 border-b border-[var(--color-border)]">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-text-secondary)] mr-3">
+        <circle cx="8" cy="8" r="6"/>
+        <path d="m13 13 5 5"/>
+      </svg>
+      <input
+        id="search-input"
+        type="text"
+        placeholder="Search lectures..."
+        class="flex-1 bg-transparent outline-none text-[var(--color-text)] placeholder-[var(--color-text-secondary)]"
+        autocomplete="off"
+      />
+      <button id="search-close" class="ml-2 text-xs px-2 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-secondary)]">ESC</button>
+    </div>
+    <div id="search-results" class="max-h-[60vh] overflow-y-auto p-2"></div>
+  </div>
+</div>
+
+<script define:vars={{ searchIndex, base }}>
+  window.__searchIndex = searchIndex;
+  window.__base = base;
+</script>
+
+<script>
+  import Fuse from 'fuse.js';
+
+  let fuse: Fuse<any> | null = null;
+
+  function getFuse() {
+    if (fuse) return fuse;
+    const index = (window as any).__searchIndex || [];
+    fuse = new Fuse(index, {
+      keys: [
+        { name: 'title', weight: 3 },
+        { name: 'description', weight: 2 },
+        { name: 'body', weight: 1 },
+      ],
+      threshold: 0.3,
+      includeMatches: true,
+      minMatchCharLength: 2,
+    });
+    return fuse;
+  }
+
+  const input = document.getElementById('search-input') as HTMLInputElement;
+  const results = document.getElementById('search-results');
+
+  input?.addEventListener('input', () => {
+    const query = input.value.trim();
+    if (!results) return;
+
+    if (query.length < 2) {
+      results.innerHTML = '<div class="px-4 py-8 text-center text-sm text-[var(--color-text-secondary)]">Type at least 2 characters to search...</div>';
+      return;
+    }
+
+    const f = getFuse();
+    const hits = f.search(query, { limit: 10 });
+    const base = (window as any).__base || '/';
+
+    if (hits.length === 0) {
+      results.innerHTML = '<div class="px-4 py-8 text-center text-sm text-[var(--color-text-secondary)]">No results found</div>';
+      return;
+    }
+
+    results.innerHTML = hits.map((hit: any) => {
+      const item = hit.item;
+      // Find a snippet around the match in body
+      let snippet = item.description;
+      if (hit.matches) {
+        const bodyMatch = hit.matches.find((m: any) => m.key === 'body');
+        if (bodyMatch && bodyMatch.indices.length > 0) {
+          const [start] = bodyMatch.indices[0];
+          const s = Math.max(0, start - 40);
+          const e = Math.min(item.body.length, start + 100);
+          snippet = (s > 0 ? '...' : '') + item.body.slice(s, e).trim() + (e < item.body.length ? '...' : '');
+        }
+      }
+      return `
+        <a href="${base}/lectures/${item.slug}/" class="block px-3 py-2.5 rounded-lg hover:bg-[var(--color-accent-light)] no-underline transition-colors">
+          <div class="flex items-center gap-2 mb-0.5">
+            <span>${item.icon}</span>
+            <span class="font-semibold text-sm text-[var(--color-text)]">Lecture ${item.order}: ${item.title}</span>
+          </div>
+          <div class="text-xs text-[var(--color-text-secondary)] line-clamp-2 pl-7">${snippet}</div>
+        </a>
+      `;
+    }).join('');
+  });
+</script>
